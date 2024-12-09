@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEGO Pixel Art Generator</title>
+    <style>
+        /* Reset and global styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            background-color: #f4f4f9;
+            color: #333;
+            height: 100vh;
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+        }
+        canvas {
+            display: block;
+            width: calc(100% - 20px);
+            height: auto;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        #welcome-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: rgba(50, 50, 50, 0.7);
+            text-align: center;
+            display: none;
+        }
+        #controls {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+        .control-group {
+            flex: 1;
+            min-width: calc(50% - 5px);
+        }
+        .control-group.full-width {
+            flex: 1 1 100%;
+        }
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        input[type="number"], input[type="color"], button, input[type="file"], select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        #summary {
+            margin-top: 10px;
+            font-size: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="canvas-container" style="position:relative; width:100%;">
+            <canvas id="legoCanvas"></canvas>
+            <div id="welcome-message">Upload your image</div>
+        </div>
+        <div id="controls">
+            <div class="control-group full-width">
+                <label for="uploadImage">Upload Image</label>
+                <input type="file" id="uploadImage" accept="image/*">
+            </div>
+            <div class="control-group">
+                <label for="columns">Columns</label>
+                <input type="number" id="columns" value="32" min="4" max="100">
+            </div>
+            <div class="control-group">
+                <label for="backgroundColorPicker">Background Color</label>
+                <input type="color" id="backgroundColorPicker" value="#ffffff">
+            </div>
+            <div class="control-group">
+                <label for="color1Picker">Color 1</label>
+                <input type="color" id="color1Picker" value="#ffffff">
+            </div>
+            <div class="control-group">
+                <label for="color2Picker">Color 2</label>
+                <input type="color" id="color2Picker" value="#cccccc">
+            </div>
+            <div class="control-group">
+                <label for="color3Picker">Color 3</label>
+                <input type="color" id="color3Picker" value="#aaaaaa">
+            </div>
+            <div class="control-group">
+                <label for="color4Picker">Color 4</label>
+                <input type="color" id="color4Picker" value="#555555">
+            </div>
+            <div class="control-group full-width">
+                <label for="showWireframe"><input type="checkbox" id="showWireframe" checked> Show Wireframe</label>
+            </div>
+        </div>
+        <div id="summary">Total Bricks: 0</div>
+    </div>
+
+    <script>
+        const uploadImage = document.getElementById('uploadImage');
+        const canvas = document.getElementById('legoCanvas');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const ctx = canvas.getContext('2d');
+        const columnsInput = document.getElementById('columns');
+        const backgroundColorPicker = document.getElementById('backgroundColorPicker');
+        const colorPickers = [
+            document.getElementById('color1Picker'),
+            document.getElementById('color2Picker'),
+            document.getElementById('color3Picker'),
+            document.getElementById('color4Picker')
+        ];
+        const showWireframe = document.getElementById('showWireframe');
+        let originalImage = null;
+
+        // Responsive canvas
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth - 20;
+            canvas.height = canvas.width;
+        }
+
+        resizeCanvas(); // Initial canvas resize
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (originalImage) generateGrid();
+        });
+
+        uploadImage.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        originalImage = img;
+                        welcomeMessage.style.display = 'none'; // Hide welcome message
+                        generateGrid();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Generate grid function
+        function generateGrid() {
+            if (!originalImage) return;
+
+            const columns = parseInt(columnsInput.value);
+            const colors = colorPickers.map(picker => picker.value);
+            const backgroundColor = backgroundColorPicker.value;
+
+            const aspectRatio = originalImage.width / originalImage.height;
+            const cellSize = canvas.width / columns;
+            const rows = Math.floor(columns / aspectRatio);
+            canvas.height = rows * cellSize;
+
+            ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < columns; x++) {
+                    const index = (y * columns + x) * 4;
+                    const brightness = (data[index] + data[index + 1] + data[index + 2]) / 3;
+                    const group = Math.min(Math.floor(brightness / 64), 3); // Group based on brightness
+                    ctx.fillStyle = colors[group] || backgroundColor;
+                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+
+                    if (showWireframe.checked) {
+                        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
+                        ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+        }
+
+        // Add event listeners to inputs
+        [columnsInput, backgroundColorPicker, ...colorPickers, showWireframe].forEach(input => {
+            input.addEventListener('input', generateGrid);
+        });
+    </script>
+</body>
+</html>
