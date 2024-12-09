@@ -16,10 +16,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: center;
             background-color: #f4f4f9;
             color: #333;
             height: 100vh;
+            padding: 10px;
         }
         #app {
             display: flex;
@@ -27,7 +28,7 @@
             align-items: center;
             width: 100%;
             height: 100%;
-            padding: 10px;
+            max-width: 480px;
         }
         canvas {
             display: block;
@@ -35,7 +36,6 @@
             height: auto;
             border: 1px solid #ccc;
             margin-bottom: 10px;
-            position: relative;
         }
         #welcome-message {
             position: absolute;
@@ -49,7 +49,6 @@
         }
         #controls {
             width: 100%;
-            max-width: 480px;
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
@@ -64,17 +63,21 @@
             flex: 1 1 100%;
         }
         label {
-            display: block;
+            display: flex;
+            align-items: center;
             font-size: 0.9rem;
             margin-bottom: 5px;
             color: #666;
         }
-        input[type="number"], input[type="color"], button, input[type="file"], select {
+        input[type="number"], input[type="color"], input[type="file"], button {
             width: 100%;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 1rem;
+        }
+        input[type="checkbox"] {
+            margin-right: 5px;
         }
         button {
             background-color: #007bff;
@@ -96,10 +99,8 @@
 </head>
 <body>
     <div id="app">
-        <div id="canvas-container" style="position:relative; width:100%;">
-            <canvas id="legoCanvas"></canvas>
-            <div id="welcome-message">Upload your image</div>
-        </div>
+        <canvas id="legoCanvas"></canvas>
+        <div id="welcome-message">Upload your image</div>
         <div id="controls">
             <div class="control-group full-width">
                 <label for="uploadImage">Upload Image</label>
@@ -109,28 +110,28 @@
                 <label for="columns">Columns</label>
                 <input type="number" id="columns" value="32" min="4" max="100">
             </div>
-            <div class="control-group">
+            <div class="control-group full-width">
                 <label for="backgroundColorPicker">Background Color</label>
                 <input type="color" id="backgroundColorPicker" value="#ffffff">
             </div>
             <div class="control-group">
-                <label for="color1Picker">Color 1</label>
+                <label><input type="checkbox" id="showColor1" checked> Color 1</label>
                 <input type="color" id="color1Picker" value="#ffffff">
             </div>
             <div class="control-group">
-                <label for="color2Picker">Color 2</label>
+                <label><input type="checkbox" id="showColor2" checked> Color 2</label>
                 <input type="color" id="color2Picker" value="#cccccc">
             </div>
             <div class="control-group">
-                <label for="color3Picker">Color 3</label>
+                <label><input type="checkbox" id="showColor3" checked> Color 3</label>
                 <input type="color" id="color3Picker" value="#aaaaaa">
             </div>
             <div class="control-group">
-                <label for="color4Picker">Color 4</label>
+                <label><input type="checkbox" id="showColor4" checked> Color 4</label>
                 <input type="color" id="color4Picker" value="#555555">
             </div>
             <div class="control-group full-width">
-                <label for="showWireframe"><input type="checkbox" id="showWireframe" checked> Show Wireframe</label>
+                <button id="downloadButton">Download Image</button>
             </div>
         </div>
         <div id="summary">Total Bricks: 0</div>
@@ -149,16 +150,22 @@
             document.getElementById('color3Picker'),
             document.getElementById('color4Picker')
         ];
-        const showWireframe = document.getElementById('showWireframe');
+        const showColors = [
+            document.getElementById('showColor1'),
+            document.getElementById('showColor2'),
+            document.getElementById('showColor3'),
+            document.getElementById('showColor4')
+        ];
+        const downloadButton = document.getElementById('downloadButton');
         let originalImage = null;
 
-        // Responsive canvas
+        // Resize canvas dynamically
         function resizeCanvas() {
             canvas.width = canvas.parentElement.clientWidth - 20;
             canvas.height = canvas.width;
         }
 
-        resizeCanvas(); // Initial canvas resize
+        resizeCanvas(); // Initial resize
 
         window.addEventListener('resize', () => {
             resizeCanvas();
@@ -182,14 +189,11 @@
             }
         });
 
-        // Generate grid function
         function generateGrid() {
             if (!originalImage) return;
 
             const columns = parseInt(columnsInput.value);
-            const colors = colorPickers.map(picker => picker.value);
-            const backgroundColor = backgroundColorPicker.value;
-
+            const colors = colorPickers.map((picker, i) => (showColors[i].checked ? picker.value : backgroundColorPicker.value));
             const aspectRatio = originalImage.width / originalImage.height;
             const cellSize = canvas.width / columns;
             const rows = Math.floor(columns / aspectRatio);
@@ -203,22 +207,25 @@
 
             for (let y = 0; y < rows; y++) {
                 for (let x = 0; x < columns; x++) {
+                    const px = Math.floor(x * cellSize);
+                    const py = Math.floor(y * cellSize);
                     const index = (y * columns + x) * 4;
                     const brightness = (data[index] + data[index + 1] + data[index + 2]) / 3;
                     const group = Math.min(Math.floor(brightness / 64), 3); // Group based on brightness
-                    ctx.fillStyle = colors[group] || backgroundColor;
-                    ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-
-                    if (showWireframe.checked) {
-                        ctx.strokeStyle = "rgba(0, 0, 0, 0.3)";
-                        ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
-                    }
+                    ctx.fillStyle = colors[group];
+                    ctx.fillRect(px, py, cellSize, cellSize);
                 }
             }
         }
 
-        // Add event listeners to inputs
-        [columnsInput, backgroundColorPicker, ...colorPickers, showWireframe].forEach(input => {
+        downloadButton.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'lego_grid.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+
+        [columnsInput, backgroundColorPicker, ...colorPickers, ...showColors].forEach(input => {
             input.addEventListener('input', generateGrid);
         });
     </script>
