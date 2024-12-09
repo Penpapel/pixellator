@@ -171,6 +171,7 @@
         const summaryElement = document.getElementById('summary');
         const downloadButton = document.getElementById('downloadButton');
         let originalImage = null;
+        let brickCounts = [0, 0, 0, 0];
 
         function resizeCanvas() {
             canvas.width = canvas.parentElement.clientWidth - 20;
@@ -210,7 +211,7 @@
             canvas.height = rows * cellSize;
 
             const colors = colorPickers.map((picker, i) => (showColors[i].checked ? picker.value : backgroundColorPicker.value));
-            const brickCounts = [0, 0, 0, 0];
+            brickCounts = [0, 0, 0, 0];
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -239,12 +240,21 @@
                 }
             }
 
+            updateCounts();
+        }
+
+        function updateCounts() {
             let totalBricks = 0;
             brickCounts.forEach((count, i) => {
-                totalBricks += count;
-                brickCountElements[i].textContent = count;
+                if (showColors[i].checked) {
+                    brickCountElements[i].textContent = count;
+                    totalBricks += count;
+                } else {
+                    brickCountElements[i].textContent = 0;
+                }
             });
-            summaryElement.textContent = `Total Bricks: ${totalBricks}`;
+            summaryElement.textContent =
+`Total Bricks: ${totalBricks}`;
         }
 
         downloadButton.addEventListener('click', () => {
@@ -254,8 +264,13 @@
             link.click();
         });
 
+        // Add event listeners to inputs and checkboxes
         [columnsInput, backgroundColorPicker, ...colorPickers, ...showColors].forEach(input => {
             input.addEventListener('input', generateGrid);
+        });
+
+        showColors.forEach(checkbox => {
+            checkbox.addEventListener('change', updateCounts);
         });
     </script>
 </body>
