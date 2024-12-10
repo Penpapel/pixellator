@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LEGO Pixel Art Generator</title>
     <style>
-        /* Reset and global styles */
         * {
             margin: 0;
             padding: 0;
@@ -32,10 +31,11 @@
         }
         canvas {
             display: block;
-            width: calc(100% - 20px);
+            width: 100%;
             height: auto;
             border: 1px solid #ccc;
             margin-bottom: 10px;
+            position: relative;
         }
         #controls {
             width: 100%;
@@ -174,8 +174,25 @@
         let brickCounts = [0, 0, 0, 0];
 
         function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth - 20;
+            canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.width;
+        }
+
+        function drawNumbering(rows, columns, cellSize) {
+            ctx.font = `${cellSize * 0.5}px Arial`;
+            ctx.fillStyle = '#000'; // Black font
+            ctx.textAlign = 'center';
+
+            // Draw column numbers
+            for (let i = 0; i < columns; i++) {
+                ctx.fillText(i + 1, i * cellSize + cellSize / 2, cellSize / 2);
+            }
+
+            // Draw row numbers
+            ctx.textAlign = 'right';
+            for (let i = 0; i < rows; i++) {
+                ctx.fillText(i + 1, cellSize / 2, i * cellSize + cellSize / 2 + cellSize);
+            }
         }
 
         resizeCanvas();
@@ -240,6 +257,7 @@
                 }
             }
 
+            drawNumbering(rows, columns, cellSize);
             updateCounts();
         }
 
@@ -253,8 +271,7 @@
                     brickCountElements[i].textContent = 0;
                 }
             });
-            summaryElement.textContent =
-`Total Bricks: ${totalBricks}`;
+            summaryElement.textContent = `Total Bricks: ${totalBricks}`;
         }
 
         downloadButton.addEventListener('click', () => {
@@ -264,7 +281,6 @@
             link.click();
         });
 
-        // Add event listeners to inputs and checkboxes
         [columnsInput, backgroundColorPicker, ...colorPickers, ...showColors].forEach(input => {
             input.addEventListener('input', generateGrid);
         });
